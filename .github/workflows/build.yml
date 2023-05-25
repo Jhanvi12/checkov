@@ -41,8 +41,8 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@24cb9080177205b6e8c946b17badbe402adc938f  # v3
-      - uses: actions/setup-python@d27e3f3d7c64b4bbf8e4abfb9b63b83e846e0435  # v4
+      - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab  # v3
+      - uses: actions/setup-python@57ded4d7d5e986d7296eab16560982c6dd7c923b  # v4
         with:
           python-version: ${{ matrix.python }}
       - uses: actions/setup-node@64ed1c7eab4cce3362f8c340dee64e5eaeef8f7c  # v3
@@ -77,7 +77,7 @@ jobs:
         env:
           LOG_LEVEL: INFO
           BC_KEY: ${{ secrets.BC_API_KEY }}
-          TFC_TOKEN: ${{ secrets.TFC_TOKEN }}
+          TF_REGISTRY_TOKEN: ${{ secrets.TFC_TOKEN }}
           GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       - name: Run integration tests
         run: |
@@ -85,8 +85,8 @@ jobs:
   prisma-tests:
     runs-on: [ self-hosted, public, linux, x64 ]
     steps:
-      - uses: actions/checkout@24cb9080177205b6e8c946b17badbe402adc938f  # v3
-      - uses: actions/setup-python@d27e3f3d7c64b4bbf8e4abfb9b63b83e846e0435  # v4
+      - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab  # v3
+      - uses: actions/setup-python@57ded4d7d5e986d7296eab16560982c6dd7c923b  # v4
         with:
           python-version: 3.7
       - name: Install pipenv
@@ -112,12 +112,12 @@ jobs:
     timeout-minutes: 30
     runs-on: [self-hosted, public, linux, x64]
     steps:
-      - uses: actions/checkout@24cb9080177205b6e8c946b17badbe402adc938f  # v3
+      - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab  # v3
       - name: Set up Python 3.7
-        uses: actions/setup-python@d27e3f3d7c64b4bbf8e4abfb9b63b83e846e0435  # v4
+        uses: actions/setup-python@57ded4d7d5e986d7296eab16560982c6dd7c923b  # v4
         with:
           python-version: 3.7
-      - uses: azure/setup-helm@f382f75448129b3be48f8121b9857be18d815a82  # v3
+      - uses: azure/setup-helm@5119fcb9089d432beecbf79bb2c7915207344b78  # v3
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
       - uses: imranismail/setup-kustomize@a76db1c6419124d51470b1e388c4b29476f495f1  # v2
@@ -139,19 +139,23 @@ jobs:
     needs: [integration-tests, unit-tests, prisma-tests]
     runs-on: [self-hosted, public, linux, x64]
     environment: release
+    permissions:
+      contents: write
+      # IMPORTANT: this permission is mandatory for trusted publishing to pypi
+      id-token: write
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@24cb9080177205b6e8c946b17badbe402adc938f  # v3
+      - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab  # v3
         with:
           token: ${{ secrets.GH_PAT_SECRET }}
       - name: Import GPG key
         id: import_gpg
-        uses: crazy-max/ghaction-import-gpg@111c56156bcc6918c056dbef52164cfa583dc549  # v5
+        uses: crazy-max/ghaction-import-gpg@72b6676b71ab476b77e676928516f6982eef7a41  # v5
         with:
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
           passphrase: ${{ secrets.PASSPHRASE }}
       - name: Set up Python 3.7
-        uses: actions/setup-python@d27e3f3d7c64b4bbf8e4abfb9b63b83e846e0435  # v4
+        uses: actions/setup-python@57ded4d7d5e986d7296eab16560982c6dd7c923b  # v4
         with:
           python-version: 3.7
       - name: Install pipenv
@@ -239,9 +243,7 @@ jobs:
         run: |
           pipenv run python setup.py sdist bdist_wheel
       - name: Publish a Python distribution to PyPI
-        uses: pypa/gh-action-pypi-publish@a3a3bafbb3e5a75a854ae1bc53ae128cf22c4af4  # v1
-        with:
-          password: ${{ secrets.PYPI_TOKEN }}
+        uses: pypa/gh-action-pypi-publish@a56da0b891b3dc519c7ee3284aff1fad93cc8598  # v1
       - name: sleep and wait for package to refresh
         run: |
           sleep 2m
@@ -261,7 +263,7 @@ jobs:
       FULL_IMAGE_TAG: ${{ needs.bump-version.outputs.version }}
       SHORT_IMAGE_TAG: ${{ needs.bump-version.outputs.major_version }}
     steps:
-      - uses: actions/checkout@24cb9080177205b6e8c946b17badbe402adc938f  # v3
+      - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab  # v3
       - uses: sigstore/cosign-installer@9becc617647dfa20ae7b1151972e9b3a2c338a2b  # v2
       - uses: docker/setup-qemu-action@e81a89b1732b9c48d79cd809d8d81d79c4647a18  # v2
         with:
@@ -280,7 +282,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Docker meta
         id: docker_meta
-        uses: docker/metadata-action@507c2f2dc502c992ad446e3d7a5dfbe311567a96  # v4
+        uses: docker/metadata-action@c4ee3adeed93b1fa6a762f209fb01608c1a22f1e  # v4
         with:
           images: ${{ env.DH_IMAGE_NAME }}
           labels: |
@@ -342,7 +344,7 @@ jobs:
     needs: bump-version
     environment: release
     steps:
-      - uses: actions/checkout@24cb9080177205b6e8c946b17badbe402adc938f  # v3
+      - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab  # v3
       - name: update checkov-k8s version
         run: |
           checkov_version=${{ needs.bump-version.outputs.version }}
@@ -351,7 +353,7 @@ jobs:
           echo "major_version=$checkov_major_version" >> "$GITHUB_OUTPUT"
         id: versions
       - name: Publish to Registry
-        uses: elgohr/Publish-Docker-Github-Action@d2068fdcc539fd7afb855991c7d7b52f29028016  # v5
+        uses: elgohr/Publish-Docker-Github-Action@43dc228e327224b2eda11c8883232afd5b34943b  # v5
         with:
           name: bridgecrew/checkov-k8s
           username: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -364,7 +366,7 @@ jobs:
     needs: bump-version
     environment: release
     steps:
-      - uses: actions/checkout@24cb9080177205b6e8c946b17badbe402adc938f  # v3
+      - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab  # v3
       - name: Get release version
         id: versions
         run: |
@@ -373,7 +375,7 @@ jobs:
           echo "version=$checkov_version" >> "$GITHUB_OUTPUT"
           echo "major_version=$checkov_major_version" >> "$GITHUB_OUTPUT"
       - name: Publish to Registry
-        uses: elgohr/Publish-Docker-Github-Action@d2068fdcc539fd7afb855991c7d7b52f29028016  # v5
+        uses: elgohr/Publish-Docker-Github-Action@43dc228e327224b2eda11c8883232afd5b34943b  # v5
         with:
           name: bridgecrew/checkov
           username: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -386,13 +388,16 @@ jobs:
     runs-on: [self-hosted, public, linux, x64]
     environment: release
     steps:
-      - uses: actions/checkout@24cb9080177205b6e8c946b17badbe402adc938f  # v3
+      - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab  # v3
       - name: update checkov release
         run: |
           curl -X POST "https://jenkins-webhook.bridgecrew.cloud/buildByToken/build?job=Open-Source/upgrade-checkov&token=${{ secrets.BC_JENKINS_TOKEN }}"
 
           # trigger checkov-action update
           curl -XPOST -u "${{ secrets.GH_PAT_USER}}:${{secrets.GH_PAT_SECRET}}" -H "Accept: application/vnd.github.everest-preview+json" -H "Content-Type: application/json" https://api.github.com/repos/bridgecrewio/checkov-action/dispatches --data '{"event_type": "build"}'
+
+          # trigger bridgecrew-py update
+          curl -XPOST -u "${{ secrets.GH_PAT_USER}}:${{secrets.GH_PAT_SECRET}}" -H "Accept: application/vnd.github.everest-preview+json" -H "Content-Type: application/json" https://api.github.com/repos/bridgecrewio/bridgecrew-py/dispatches --data '{"event_type": "build"}'
 
           # trigger whorf update
           curl -XPOST -u "${{ secrets.GH_PAT_USER}}:${{secrets.GH_PAT_SECRET}}" -H "Accept: application/vnd.github.everest-preview+json" -H "Content-Type: application/json" https://api.github.com/repos/bridgecrewio/whorf/dispatches --data '{"event_type": "release"}'
